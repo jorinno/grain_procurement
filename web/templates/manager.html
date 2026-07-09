@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% from "_ticket.html" import ticket %}
+{% block title %}Manager — Grain Ledger{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <p class="eyebrow">Procurement Manager</p>
+  <h1>Pending payments</h1>
+  <p>Send the supplier payout and agent commission manually via Mobile Money, then record each confirmation below.</p>
+</div>
+
+<div class="grid-2">
+  <div>
+    <section class="panel">
+      <h2>Awaiting payment</h2>
+      {% if pending %}
+        {% for p in pending %}
+          {{ ticket(p, show_agent=True) }}
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">No purchases are currently pending payment.</div>
+      {% endif %}
+    </section>
+  </div>
+
+  <div>
+    <section class="panel">
+      <h2>Record a payment confirmation</h2>
+      <form method="post" action="{{ url_for('manager_confirm') }}">
+        <div class="field">
+          <label for="purchase_id">Purchase</label>
+          <select id="purchase_id" name="purchase_id" required>
+            {% for p in pending %}
+              <option value="{{ p.id }}">{{ p.purchase_ref }} — {{ p.supplier_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="payment_type">Payment type</label>
+          <select id="payment_type" name="payment_type" required>
+            <option value="SUPPLIER">Supplier payout</option>
+            <option value="AGENT">Agent commission</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="transaction_reference">Mobile Money transaction reference</label>
+          <input type="text" id="transaction_reference" name="transaction_reference" required>
+        </div>
+        <button type="submit">Record confirmation</button>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>Notifications</h2>
+      {% if notifications %}
+        {% for n in notifications %}
+          <div class="notif">
+            <span class="dot {{ 'read' if n.read_flag else '' }}"></span>
+            <div class="body">
+              {{ n.message }}
+              <span class="time">{{ n.created_at[:16] | replace('T', ' ') }}</span>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">No notifications yet.</div>
+      {% endif %}
+    </section>
+  </div>
+</div>
+
+{% endblock %}

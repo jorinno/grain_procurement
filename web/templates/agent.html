@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% from "_ticket.html" import ticket %}
+{% block title %}Agent — Grain Ledger{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <p class="eyebrow">Purchase Agent</p>
+  <h1>Record a grain purchase</h1>
+  <p>Weigh the grain, enter the details below, then verify supplier Mobile Money information before confirming.</p>
+</div>
+
+{% if not pending_calc %}
+<section class="panel">
+  <h2>Step 1 — Grain details</h2>
+  <form method="post" action="{{ url_for('agent_calculate') }}">
+    <div class="field-row">
+      <div class="field">
+        <label for="category">Grain category</label>
+        <select id="category" name="category" required>
+          {% for c in categories %}
+            <option value="{{ c.category }}">{{ c.category }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="weight_kg">Weight (kg)</label>
+        <input type="number" step="0.01" min="0.01" id="weight_kg" name="weight_kg" required>
+      </div>
+    </div>
+    <button type="submit">Calculate</button>
+  </form>
+</section>
+{% else %}
+<section class="panel">
+  <h2>Step 2 — Review, supplier details &amp; confirm</h2>
+
+  <div class="ticket">
+    <div class="ticket-head">
+      <div>
+        <div class="ticket-ref">Preview — not yet saved</div>
+        <div class="ticket-meta">{{ pending_calc.category_name }} &middot; {{ pending_calc.weight_kg }} kg</div>
+      </div>
+      <span class="stamp pending">calculated</span>
+    </div>
+    <div class="ticket-body">
+      <div class="ticket-line"><span class="k">Unit price/kg</span><span class="v">{{ pending_calc.unit_price }}</span></div>
+      <div class="ticket-line"><span class="k">Supplier payout</span><span class="v">{{ pending_calc.supplier_payout }}</span></div>
+      <div class="ticket-line"><span class="k">Commission rate/kg</span><span class="v">{{ pending_calc.commission_rate }}</span></div>
+      <div class="ticket-line"><span class="k">Your commission</span><span class="v">{{ pending_calc.commission_amount }}</span></div>
+    </div>
+  </div>
+  <p class="hint">These calculated values are read-only. Editing category or weight starts a new calculation.</p>
+
+  <form method="post" action="{{ url_for('agent_submit') }}">
+    <div class="field-row">
+      <div class="field">
+        <label for="supplier_name">Supplier name</label>
+        <input type="text" id="supplier_name" name="supplier_name" required>
+      </div>
+      <div class="field">
+        <label for="momo_provider">Mobile-money provider</label>
+        <input type="text" id="momo_provider" name="momo_provider" placeholder="MTN / Airtel" required>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="momo_number">Mobile-money number</label>
+        <input type="text" id="momo_number" name="momo_number" placeholder="07XXXXXXXX" required>
+      </div>
+      <div class="field">
+        <label for="id_info">Supplier ID info (optional)</label>
+        <input type="text" id="id_info" name="id_info">
+      </div>
+    </div>
+    <div class="actions">
+      <button type="submit">Confirm &amp; submit purchase</button>
+      <a class="btn secondary" href="{{ url_for('agent_cancel') }}">Cancel, start over</a>
+    </div>
+  </form>
+</section>
+{% endif %}
+
+<section class="panel">
+  <h2>My notifications</h2>
+  {% if notifications %}
+    {% for n in notifications %}
+      <div class="notif">
+        <span class="dot {{ 'read' if n.read_flag else '' }}"></span>
+        <div class="body">
+          {{ n.message }}
+          <span class="time">{{ n.created_at[:16] | replace('T', ' ') }}</span>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-state">No notifications yet — they'll appear here once a purchase is saved.</div>
+  {% endif %}
+</section>
+
+{% endblock %}
