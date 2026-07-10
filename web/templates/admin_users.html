@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Users — Grain Ledger{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <p class="eyebrow">Administrator</p>
+  <h1>User accounts</h1>
+  <p>Agents can create their own accounts at <code>/signup</code>. Manager and admin accounts are privileged and are created here.</p>
+</div>
+
+<div class="tabs">
+  <a href="{{ url_for('admin_home') }}">Pricing &amp; commission</a>
+  <a href="{{ url_for('admin_users') }}" class="active">Users</a>
+  <a href="{{ url_for('reports_home') }}">Reports</a>
+</div>
+
+<section class="panel">
+  <h2>All accounts</h2>
+  <table class="config">
+    <thead>
+      <tr><th>Username</th><th>Role</th><th>Status</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td class="{{ '' if u.active else 'inactive-name' }}">{{ u.username }}</td>
+        <td><span class="tag">{{ u.role }}</span></td>
+        <td><span class="tag {{ 'active' if u.active else '' }}">{{ 'active' if u.active else 'inactive' }}</span></td>
+        <td>
+          <form method="post" action="{{ url_for('admin_toggle_user') }}" style="display:inline;">
+            <input type="hidden" name="user_id" value="{{ u.id }}">
+            <input type="hidden" name="active" value="{{ 0 if u.active else 1 }}">
+            <button type="submit" class="secondary" style="padding: 4px 10px; font-size: 12px;">
+              {{ 'Deactivate' if u.active else 'Activate' }}
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="panel">
+  <h2>Create manager or admin account</h2>
+  <form method="post" action="{{ url_for('admin_create_user') }}">
+    <div class="field-row">
+      <div class="field">
+        <label for="new_username">Username</label>
+        <input type="text" id="new_username" name="username" required>
+      </div>
+      <div class="field">
+        <label for="new_role">Role</label>
+        <select id="new_role" name="role" required>
+          <option value="MANAGER">Manager</option>
+          <option value="ADMIN">Admin</option>
+          <option value="AGENT">Agent</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label for="new_password">Password</label>
+      <input type="password" id="new_password" name="password" minlength="8" required>
+      <p class="hint">At least 8 characters. Share this with the new user securely — it isn't emailed automatically.</p>
+    </div>
+    <button type="submit">Create account</button>
+  </form>
+</section>
+
+{% endblock %}

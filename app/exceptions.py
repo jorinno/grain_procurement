@@ -56,3 +56,11 @@ class DuplicatePaymentConfirmationError(GrainProcurementError):
 
 class PurchaseNotFoundError(GrainProcurementError):
     """Raised when a referenced purchase does not exist."""
+
+
+class UsernameTakenError(GrainProcurementError):
+    """Raised when attempting to register a username that already exists."""
+
+
+class WeakPasswordError(GrainProcurementError):
+    """Raised when a chosen password does not meet the minimum requirements."""

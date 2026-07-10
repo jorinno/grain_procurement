@@ -10,9 +10,10 @@ actions) without pulling in an external auth service.
 import hashlib
 import hmac
 import os
+import sqlite3
 
 from app.database import get_connection
-from app.exceptions import AuthenticationError
+from app.exceptions import AuthenticationError, UsernameTakenError, WeakPasswordError
 
 
 def hash_password(password: str, salt: bytes | None = None) -> str:
@@ -41,13 +42,29 @@ class CurrentUser:
         return f"<CurrentUser {self.username} ({self.role})>"
 
 
+MIN_PASSWORD_LENGTH = 8
+
+
 def create_user(username: str, password: str, role: str) -> int:
-    with get_connection() as conn:
-        cur = conn.execute(
-            "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
-            (username, hash_password(password), role),
+    username = (username or "").strip()
+    if not username:
+        raise ValueError("Username cannot be empty")
+    if role not in ("AGENT", "MANAGER", "ADMIN"):
+        raise ValueError(f"Invalid role: {role}")
+    if len(password or "") < MIN_PASSWORD_LENGTH:
+        raise WeakPasswordError(
+            f"Password must be at least {MIN_PASSWORD_LENGTH} characters"
         )
-        return cur.lastrowid
+
+    try:
+        with get_connection() as conn:
+            cur = conn.execute(
+                "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
+                (username, hash_password(password), role),
+            )
+            return cur.lastrowid
+    except sqlite3.IntegrityError:
+        raise UsernameTakenError(f"Username '{username}' is already taken")
 
 
 def login(username: str, password: str) -> CurrentUser:
@@ -69,3 +86,16 @@ def require_role(user: CurrentUser, *allowed_roles: str) -> None:
         raise AuthorizationError(
             f"Action requires one of roles {allowed_roles}, but user has role '{user.role}'"
         )
+
+
+def list_users():
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT id, username, role, active FROM users ORDER BY role, username"
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def set_user_active(user_id: int, active: bool) -> None:
+    with get_connection() as conn:
+        conn.execute("UPDATE users SET active = ? WHERE id = ?", (1 if active else 0, user_id))

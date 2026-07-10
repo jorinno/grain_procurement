@@ -14,10 +14,10 @@ Run:
 import os
 from functools import wraps
 
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, Response
 
 from app.database import init_db
-from app import auth, admin_service, purchase_service, notification_service
+from app import auth, admin_service, purchase_service, notification_service, reporting_service
 from app.auth import CurrentUser
 from app.exceptions import GrainProcurementError
 
@@ -74,6 +74,35 @@ def login():
             flash(str(e), "error")
 
     return render_template("login.html")
+
+
+@flask_app.route("/signup", methods=["GET", "POST"])
+def signup():
+    if current_user():
+        return redirect(url_for("dashboard"))
+
+    if request.method == "POST":
+        username = request.form.get("username", "")
+        password = request.form.get("password", "")
+        confirm = request.form.get("confirm_password", "")
+
+        if password != confirm:
+            flash("Passwords do not match.", "error")
+            return render_template("signup.html", username=username)
+
+        try:
+            # Self-service signup is for Purchase Agents only. Manager and
+            # Admin accounts are privileged and must be created by an
+            # existing administrator (see /admin/users).
+            auth.create_user(username, password, "AGENT")
+            flash("Account created. You can now log in.", "success")
+            return redirect(url_for("login"))
+        except GrainProcurementError as e:
+            flash(str(e), "error")
+        except ValueError as e:
+            flash(str(e), "error")
+
+    return render_template("signup.html", username=request.form.get("username", ""))
 
 
 @flask_app.route("/logout")
@@ -251,6 +280,87 @@ def admin_toggle_category(user):
     except GrainProcurementError as e:
         flash(str(e), "error")
     return redirect(url_for("admin_home"))
+
+
+@flask_app.route("/admin/users", endpoint="admin_users")
+@login_required("ADMIN")
+def admin_users(user):
+    users = auth.list_users()
+    return render_template("admin_users.html", users=users)
+
+
+@flask_app.route("/admin/users/create", methods=["POST"])
+@login_required("ADMIN")
+def admin_create_user(user):
+    try:
+        username = request.form.get("username", "")
+        password = request.form.get("password", "")
+        role = request.form.get("role", "")
+        auth.create_user(username, password, role)
+        flash(f"Account '{username}' created with role {role}.", "success")
+    except (GrainProcurementError, ValueError) as e:
+        flash(str(e), "error")
+    return redirect(url_for("admin_users"))
+
+
+@flask_app.route("/admin/users/toggle", methods=["POST"])
+@login_required("ADMIN")
+def admin_toggle_user(user):
+    target_id = int(request.form.get("user_id", "0"))
+    active = request.form.get("active", "1") == "1"
+
+    if target_id == user.user_id and not active:
+        flash("You can't deactivate your own account while logged in.", "error")
+        return redirect(url_for("admin_users"))
+
+    auth.set_user_active(target_id, active)
+    flash("Account status updated.", "success")
+    return redirect(url_for("admin_users"))
+
+
+# ---------------------------------------------------------------------------
+# Reports (audit export for e.g. URA tax auditing)
+# ---------------------------------------------------------------------------
+
+def _report_filters_from_request():
+    return {
+        "start_date": request.args.get("start_date") or None,
+        "end_date": request.args.get("end_date") or None,
+        "status": request.args.get("status") or None,
+        "category": request.args.get("category") or None,
+    }
+
+
+@flask_app.route("/reports", endpoint="reports_home")
+@login_required("ADMIN", "MANAGER")
+def reports_home(user):
+    filters = _report_filters_from_request()
+    rows = reporting_service.get_audit_report(**filters)
+    summary = reporting_service.get_audit_summary(rows)
+    categories = admin_service.list_all_categories()
+    return render_template(
+        "reports.html",
+        rows=rows,
+        summary=summary,
+        filters=filters,
+        categories=categories,
+    )
+
+
+@flask_app.route("/reports/export.csv")
+@login_required("ADMIN", "MANAGER")
+def reports_export(user):
+    filters = _report_filters_from_request()
+    rows = reporting_service.get_audit_report(**filters)
+    reporting_service.record_export(user, filters, len(rows))
+
+    csv_text = reporting_service.export_csv(rows)
+    filename = "grain_purchase_audit_report.csv"
+    return Response(
+        csv_text,
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 
 if __name__ == "__main__":

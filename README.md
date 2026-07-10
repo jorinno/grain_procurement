@@ -43,6 +43,16 @@ Open `http://127.0.0.1:5000` and log in as any of the three roles. Each
 role is routed to its own dashboard (`/agent`, `/manager`, `/admin`) and
 is blocked from the others.
 
+**Adding new users:**
+- New purchase agents can self-register at `/signup` (linked from the
+  login page). Self-signup only ever creates `AGENT` accounts.
+- Manager and Admin accounts are privileged, so they aren't self-service
+  — an existing admin creates them from **Admin → Users**
+  (`/admin/users`), which also lists every account and lets you
+  activate/deactivate any of them (an admin can't deactivate their own
+  currently-logged-in account, to avoid locking everyone out).
+- Passwords must be at least 8 characters; usernames must be unique.
+
 ### CLI
 
 ```bash
@@ -110,6 +120,24 @@ rather than a generic admin-dashboard template:
 - No JavaScript framework: server-rendered Jinja templates and plain
   HTML forms, matching the CLI's own step-by-step flow (calculate →
   review → enter supplier details → confirm).
+
+## Reports (audit / URA tax auditing)
+
+`/reports` — accessible to **Admin** and **Manager** — shows the full
+purchase history with filters (date range, status, category) and a
+running summary (total weight purchased, total paid to suppliers, total
+agent commission paid). "Export CSV" downloads the currently-filtered
+rows as `grain_purchase_audit_report.csv`, including both Mobile Money
+transaction references, supplier identity, and the agent who recorded
+each purchase.
+
+Because the applied unit price and commission rate are snapshotted onto
+each purchase at the time it's recorded (Business Rule 16/17), this
+report stays accurate for historical purchases even after prices change
+later — which is exactly what a tax auditor needs. Every export is also
+written to the audit log (`app/audit.py`) with who ran it, what filters
+were used, and how many rows came back, so there's a record of who
+accessed the financial data and when.
 
 ## What's implemented vs. what's still Version 1-limited
 

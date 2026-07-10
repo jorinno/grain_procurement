@@ -8,6 +8,12 @@
   <p>Changes here apply to new purchases only — saved purchases keep the price and rate that were active when they were recorded.</p>
 </div>
 
+<div class="tabs">
+  <a href="{{ url_for('admin_home') }}" class="active">Pricing &amp; commission</a>
+  <a href="{{ url_for('admin_users') }}">Users</a>
+  <a href="{{ url_for('reports_home') }}">Reports</a>
+</div>
+
 <section class="panel">
   <h2>Active configuration</h2>
   <table class="config">

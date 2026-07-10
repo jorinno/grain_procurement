@@ -1,11 +1,13 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Grain Ledger — Log in</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
   <div class="login-wrap">
     <div class="login-card">
@@ -13,11 +15,11 @@
       <p class="tagline">PROCUREMENT &amp; MANUAL PAYMENT WORKFLOW</p>
 
       {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          {% for category, message in messages %}
-            <div class="flash {{ category }}">{{ message }}</div>
-          {% endfor %}
-        {% endif %}
+      {% if messages %}
+      {% for category, message in messages %}
+      <div class="flash {{ category }}">{{ message }}</div>
+      {% endfor %}
+      {% endif %}
       {% endwith %}
 
       <form method="post" action="{{ url_for('login') }}">
@@ -32,12 +34,13 @@
         <button type="submit">Log in</button>
       </form>
 
-      <div class="demo-accounts">
-        <div><strong>admin</strong> / admin123 — pricing &amp; commission config</div>
-        <div><strong>manager</strong> / manager123 — payment confirmations</div>
-        <div><strong>agent</strong> / agent123 — record purchases</div>
-      </div>
+
+
+      <p style="text-align:center; margin-top: 18px; font-size: 13px;">
+        New purchase agent? <a href="{{ url_for('signup') }}">Create an account</a>
+      </p>
     </div>
   </div>
 </body>
+
 </html>

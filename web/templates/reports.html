@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Reports — Grain Ledger{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <p class="eyebrow">Audit &amp; Reporting</p>
+  <h1>Purchase records</h1>
+  <p>Full transaction history </p>
+</div>
+
+{% if session.get('role') == 'ADMIN' %}
+<div class="tabs">
+  <a href="{{ url_for('admin_home') }}">Pricing &amp; commission</a>
+  <a href="{{ url_for('admin_users') }}">Users</a>
+  <a href="{{ url_for('reports_home') }}" class="active">Reports</a>
+</div>
+{% endif %}
+
+<section class="panel">
+  <h2>Filters</h2>
+  <form method="get" action="{{ url_for('reports_home') }}">
+    <div class="field-row">
+      <div class="field">
+        <label for="start_date">From</label>
+        <input type="date" id="start_date" name="start_date" value="{{ filters.start_date or '' }}">
+      </div>
+      <div class="field">
+        <label for="end_date">To</label>
+        <input type="date" id="end_date" name="end_date" value="{{ filters.end_date or '' }}">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="status">Status</label>
+        <select id="status" name="status">
+          <option value="">All statuses</option>
+          {% for s in ["PAYMENT_PENDING", "PARTIALLY_PAID", "COMPLETED", "CANCELLED"] %}
+            <option value="{{ s }}" {{ "selected" if filters.status == s else "" }}>{{ s | replace('_', ' ') }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="category">Category</label>
+        <select id="category" name="category">
+          <option value="">All categories</option>
+          {% for c in categories %}
+            <option value="{{ c.name }}" {{ "selected" if filters.category == c.name else "" }}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="actions">
+      <button type="submit">Apply filters</button>
+      <a class="btn secondary" href="{{ url_for('reports_home') }}">Clear</a>
+      <a class="btn secondary" href="{{ url_for('reports_export', start_date=filters.start_date, end_date=filters.end_date, status=filters.status, category=filters.category) }}">
+        Export CSV ({{ summary.purchase_count }} rows)
+      </a>
+    </div>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>Summary</h2>
+  <table class="config">
+    <tbody>
+      <tr><td>Purchases in range</td><td class="num">{{ summary.purchase_count }}</td></tr>
+      <tr><td>Total weight purchased</td><td class="num">{{ summary.total_weight_kg }} kg</td></tr>
+      <tr><td>Total paid to suppliers</td><td class="num">{{ summary.total_supplier_payout }}</td></tr>
+      <tr><td>Total agent commission paid</td><td class="num">{{ summary.total_commission_paid }}</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="panel">
+  <h2>Records</h2>
+  {% if rows %}
+  <div style="overflow-x:auto;">
+  <table class="config">
+    <thead>
+      <tr>
+        <th>Reference</th><th>Date</th><th>Category</th><th>Weight</th>
+        <th>Unit price</th><th>Supplier payout</th><th>Commission</th>
+        <th>Status</th><th>Supplier</th><th>Agent</th>
+        <th>Supplier txn ref</th><th>Agent txn ref</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td class="num">{{ r.purchase_ref }}</td>
+        <td class="num">{{ r.purchase_datetime[:10] }}</td>
+        <td>{{ r.category }}</td>
+        <td class="num">{{ r.weight_kg }}</td>
+        <td class="num">{{ r.unit_price }}</td>
+        <td class="num">{{ r.supplier_payout }}</td>
+        <td class="num">{{ r.commission_amount }}</td>
+        <td><span class="tag {{ 'active' if r.status == 'COMPLETED' else '' }}">{{ r.status | replace('_', ' ') }}</span></td>
+        <td>{{ r.supplier_name }}</td>
+        <td>{{ r.agent_username }}</td>
+        <td class="num">{{ r.supplier_txn_ref or '—' }}</td>
+        <td class="num">{{ r.agent_txn_ref or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+    <div class="empty-state">No purchases match these filters.</div>
+  {% endif %}
+</section>
+
+{% endblock %}
